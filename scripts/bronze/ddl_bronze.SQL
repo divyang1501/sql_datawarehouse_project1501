@@ -1,106 +1,74 @@
-/*We're going to insert the data directly into this tables
-straight from csv files using command BULK INSERT
-here you always need to specify extra info such as 
-from where actual coloumn starts and what are seperators etc.*/
+--naming according to naming conventions--
+--created table for bronze layer--
+
+/*in order to check if any table already exists and we're recreating it
+ we run a T-SQL command which drops and creates table from scratch if already exists*/
+
+if object_id ('bronze.crm_cust_info','U') is not null
+drop table bronze.crm_cust_info;
+create table bronze.crm_cust_info(
+	cst_id int,
+	cst_key nvarchar(50),
+	cst_firstname nvarchar(50),
+	cst_lastname nvarchar(50),
+	cst_material_status nvarchar(50),
+	cst_gender nvarchar(10),
+	cst_create_date date
+);
+
+if object_id ('bronze.crm_prd_info','U') is not null
+drop table bronze.crm_prd_info;
+create table bronze.crm_prd_info(
+	prd_id int,
+	prd_key nvarchar(50),
+	prd_nm nvarchar(50),
+	prd_cost int,
+	prd_line varchar(10),
+	prd_start_dt date,
+	prd_end_dt date
+);
+
+--creating table for sales details--
+if object_id ('bronze.crm_sales_details','U') is not null
+drop table bronze.crm_sales_details;
+create table bronze.crm_sales_details (
+	sls_ord_num int,
+	sls_prd_key nvarchar(50),
+	sls_cust_id int,
+	sls_order_dt date,
+	sls_ship_dt date,
+	sls_due_dt date,
+	sls_sales int,
+	sls_quantity int,
+	sls_price int
+);
+
+/*here we created DDL statement for source_crm,and now
+creating same for another sources too*/
+
+--Creating tables for source_erp--
+if object_id ('bronze.erp_cust_AZ12','U') is not null
+drop table bronze.erp_cust_AZ12;
+create table bronze.erp_cust_AZ12(
+	cid int,
+	bdate date,
+	gen varchar(10)
+);
+
+if object_id ('bronze.erp_loc_A101','U') is not null
+drop table bronze.erp_loc_A101;
+create table bronze.erp_loc_A101(
+cid int,
+cntry nvarchar(50)
+);
+
+if object_id ('bronze.px_cat_G1V2','U') is not null
+drop table bronze.px_cat_G1V2;
+create table bronze.px_cat_G1V2(
+id int,
+cat nvarchar(50),
+subcat nvarchar(50),
+maintenance nvarchar(10)
+);
 
 
---adding truncate command so even we run command twice the values gets inserted once only
-
---Making stored procedure of whole query if we want to frequently use it
-
-create or alter procedure bronze.load_bronze as
-begin
-    DECLARE @start_time datetime, @end_time datetime
-	begin try
-
-	--adding start-time to know when loading started 
-	    set @start_time=getdate();
-		truncate table bronze.crm_cust_info;
-		bulk insert bronze.crm_cust_info
-		from 'C:\Users\Shruti Solanki\Downloads\sql-data-warehouse-project\sql-data-warehouse-project\datasets\source_crm\cust_info.csv'
-		with(
-		 firstrow=2,     --it denotes the actual data starts from 2nd row, because first_row contains coloumn_name in csv
-		 fieldterminator=',', --it denotes that each value is separated by comma (,)
-		 tablock --it make sure that while the loading our csv file is locked, optimizes loading
-		);
-		set @end_time=getdate()
-		print'>> Load Duration: '+ cast(datediff(second,@start_time,@end_time) as nvarchar)+'second';  
-
-
-		--performing insertion for all six tables--
-		set @start_time=getdate();
-		truncate table bronze.crm_prd_info;
-		bulk insert bronze.crm_prd_info
-		from 'C:\Users\Shruti Solanki\Downloads\sql-data-warehouse-project\sql-data-warehouse-project\datasets\source_crm\prd_info.csv'
-		with(
-		 firstrow=2,     
-		 fieldterminator=',',
-		 tablock 
-		);
-		set @end_time=getdate();
-		print'>> Load Duration: '+ cast(datediff(second,@start_time,@end_time) as nvarchar)+'second';
-
-
-		set @start_time=getdate();
-		truncate table bronze.crm_sales_details;
-		bulk insert bronze.crm_sales_details
-		from 'C:\Users\Shruti Solanki\Downloads\sql-data-warehouse-project\sql-data-warehouse-project\datasets\source_crm\sales_details.csv'
-		with(
-		 firstrow=2,     
-		 fieldterminator=',',
-		 tablock 
-		);
-		set @end_time=getdate();
-		print'>> Load Duration: '+ cast(datediff(second,@start_time,@end_time) as nvarchar)+'second';
-		
-		
-		set @start_time=getdate();
-		truncate table bronze.erp_cust_AZ12;
-		bulk insert bronze.erp_cust_AZ12
-		from 'C:\Users\Shruti Solanki\Downloads\sql-data-warehouse-project\sql-data-warehouse-project\datasets\source_erp\CUST_AZ12.csv'
-		with(
-		 firstrow=2,     
-		 fieldterminator=',',
-		 tablock 
-		);
-		set @end_time=getdate();
-		print'>> Load Duration: '+ cast(datediff(second,@start_time,@end_time) as nvarchar)+'second';
-
-
-		set @start_time=getdate();
-		truncate table bronze.erp_loc_A101;
-		bulk insert bronze.erp_loc_A101
-		from 'C:\Users\Shruti Solanki\Downloads\sql-data-warehouse-project\sql-data-warehouse-project\datasets\source_erp\LOC_A101.csv'
-		with(
-		 firstrow=2,     
-		 fieldterminator=',',
-		 tablock 
-		);
-		set @end_time=getdate();
-		print'>> Load Duration: '+ cast(datediff(second,@start_time,@end_time) as nvarchar)+'second';
-
-
-
-		set @start_time=getdate()
-		truncate table bronze.erp_px_cat_G1V2;
-		bulk insert bronze.erp_px_cat_G1V2
-		from 'C:\Users\Shruti Solanki\Downloads\sql-data-warehouse-project\sql-data-warehouse-project\datasets\source_erp\PX_CAT_G1V2.csv'
-		with(
-		 firstrow=2,     
-		 fieldterminator=',',
-		 tablock 
-		);
-		set @end_time=getdate()
-		print'>> Load Duration: '+ cast(datediff(second,@start_time,@end_time) as nvarchar)+'second';
-
-	end try
-	begin catch
-	  print'===================================================='
-	  print'ERROR OCCURED DURING LOADING OF BRONZE LAYER'
-	  print'ERROR MESSAGE'+ERROR_MESSAGE();
-	  print'ERROR MESSAGE'+CAST(ERROR_NUMBER() AS NVARCHAR);
-	  print'ERROR MESSAGE'+CAST(ERROR_STATE()AS NVARCHAR);
-
-	end catch
-end
- 
